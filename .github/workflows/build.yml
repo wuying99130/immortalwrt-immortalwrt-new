@@ -39,4 +39,4 @@ jobs:
         uses: actions/upload-artifact@v5
         with:
           name: immortalwrt-nanopi-r1s-h3
-          path: bin/targets/sunxi/cortexa7/
+          path: bin/targets/sunxi/cortexa7/*friendlyarm_nanopi-r1*
