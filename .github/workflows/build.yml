@@ -31,6 +31,25 @@ jobs:
           cp r1s-h3.config.seed .config
           echo "CONFIG_BRCMFMAC_SDIO=y" >> .config
           echo "# CONFIG_BRCMFMAC_USB is not set" >> .config
+          
+          # 查找 NanoPi R1 设备树文件并在编译前补全 5.x/6.x 内核下的 SDIO (mmc2) 无线节点
+          DTS_FILE=$(find target/linux/sunxi/ -name "*nanopi-r1*.dts*" | head -n 1)
+          cat << 'EOF' >> $DTS_FILE
+
+&mmc2 {
+	vmmc-supply = <&reg_vcc3v3>;
+	vqmmc-supply = <&reg_vcc3v3>;
+	bus-width = <4>;
+	non-removable;
+	status = "okay";
+
+	brcmf: wifi@1 {
+		reg = <1>;
+		compatible = "brcm,bcm4329-fmac";
+	};
+};
+EOF
+
           make defconfig
 
       - name: Compile Firmware
