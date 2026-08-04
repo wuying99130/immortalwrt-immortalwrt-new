@@ -32,9 +32,21 @@ jobs:
           echo "CONFIG_BRCMFMAC_SDIO=y" >> .config
           echo "# CONFIG_BRCMFMAC_USB is not set" >> .config
           
-          # 安全激活 NanoPi R1 设备树中的 mmc2 (SDIO WiFi) 节点
-          DTS_FILE=$(find target/linux/sunxi/ -name "*nanopi-r1*.dts*" | head -n 1)
-          sed -i '/&mmc2 {/,/};/s/status = "disabled";/status = "okay";/' $DTS_FILE
+          # 1. 查找 NanoPi R1 设备树文件路径
+          DTS_FILE=$(find target/linux/ -iname "*nanopi*r1*.dts" 2>/dev/null | head -n 1)
+          echo "Target DTS File: $DTS_FILE"
+          
+          # 2. 安全追加 mmc2 上电与 SDIO 总线属性，避免 YAML EOF 语法错乱
+          if [ -n "$DTS_FILE" ]; then
+            echo '' >> "$DTS_FILE"
+            echo '&mmc2 {' >> "$DTS_FILE"
+            echo '	vmmc-supply = <&reg_vcc3v3>;' >> "$DTS_FILE"
+            echo '	vqmmc-supply = <&reg_vcc3v3>;' >> "$DTS_FILE"
+            echo '	bus-width = <4>;' >> "$DTS_FILE"
+            echo '	non-removable;' >> "$DTS_FILE"
+            echo '	status = "okay";' >> "$DTS_FILE"
+            echo '};' >> "$DTS_FILE"
+          fi
           
           make defconfig
 
