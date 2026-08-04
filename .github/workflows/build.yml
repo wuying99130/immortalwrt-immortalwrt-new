@@ -29,6 +29,8 @@ jobs:
       - name: Apply Configuration
         run: |
           cp r1s-h3.config.seed .config
+          echo "CONFIG_BRCMFMAC_SDIO=y" >> .config
+          echo "# CONFIG_BRCMFMAC_USB is not set" >> .config
           make defconfig
 
       - name: Compile Firmware
