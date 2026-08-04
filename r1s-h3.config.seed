@@ -3,19 +3,22 @@ CONFIG_TARGET_sunxi_cortexa7=y
 CONFIG_TARGET_sunxi_cortexa7_DEVICE_friendlyarm_nanopi-r1=y
 CONFIG_LUCI_LANG_zh_Hans=y
 
-# 核心板载无线驱动与博通 SDIO 固件（强制启用 SDIO 接口）
+# 1. 博通 SDIO 模式驱动与固件（必须显式指定 SDIO）
 CONFIG_PACKAGE_kmod-brcmfmac=y
 CONFIG_BRCMFMAC_SDIO=y
 CONFIG_PACKAGE_cypress-firmware-43430-sdio=y
 CONFIG_PACKAGE_kmod-usb-net-rtl8152=y
 CONFIG_PACKAGE_kmod-leds-gpio=y
 
-# MMC/SDIO 内核总线与电源管理支持（用于触发 SDIO 芯片供电与复位）
-CONFIG_PACKAGE_kmod-mmc=y
+# 2. GPIO 电源控制与 Sunxi MMC/SDIO 控制器（给芯片通电的关键）
+CONFIG_PACKAGE_kmod-rfkill=y
+CONFIG_PACKAGE_kmod-rfkill-gpio=y
+CONFIG_PACKAGE_rfkill=y
+CONFIG_PACKAGE_kmod-mmc-sunxi=y
 CONFIG_PACKAGE_kmod-regulator=y
 CONFIG_PACKAGE_kmod-regulator-fixed=y
 
-# 基础组件与 LuCI 界面
+# 3. 基础组件与 LuCI 界面
 CONFIG_PACKAGE_cgi-io=y
 CONFIG_PACKAGE_default-settings=y
 CONFIG_PACKAGE_default-settings-chn=y
@@ -56,7 +59,7 @@ CONFIG_PACKAGE_ucode-mod-math=y
 CONFIG_PACKAGE_uhttpd=y
 CONFIG_PACKAGE_uhttpd-mod-ubus=y
 
-# 无线管理工具与统一的 WPA 协议支持（统一使用 WolfSSL，避免包冲突）
+# 4. 无线管理工具与加密
 CONFIG_PACKAGE_wireless-tools=y
 CONFIG_PACKAGE_wpad-basic-wolfssl=y
 CONFIG_WOLFSSL_HAS_NO_HW=y
