@@ -37,7 +37,18 @@ jobs:
           echo "CONFIG_TARGET_ALL_PROFILES=n" >> .config
           echo "CONFIG_PACKAGE_uboot-sunxi-nanopi_r1s_h3=y" >> .config
           
-          # 2. 板载 USB LAN 网卡与 AP6212 (BCM43430) SDIO 无线驱动与固件
+          # 2. 生成 rootfs.tar.gz（用于 Docker）及 img 镜像（用于 TF 卡）
+          echo "CONFIG_TARGET_ROOTFS_EXT4FS=y" >> .config
+          echo "CONFIG_TARGET_ROOTFS_SQUASHFS=y" >> .config
+          echo "CONFIG_TARGET_ROOTFS_TARGZ=y" >> .config
+          
+          # 3. 强制打入简体中文语言包并设为默认
+          echo "CONFIG_LUCI_LANG_zh_Hans=y" >> .config
+          echo "CONFIG_PACKAGE_luci-i18n-base-zh-cn=y" >> .config
+          echo "CONFIG_PACKAGE_luci-i18n-opkg-zh-cn=y" >> .config
+          echo "CONFIG_PACKAGE_luci-i18n-firewall-zh-cn=y" >> .config
+          
+          # 4. 板载 USB LAN 网卡与 AP6212 (BCM43430) SDIO 无线驱动与固件
           echo "CONFIG_PACKAGE_kmod-usb-net-rtl8152=y" >> .config
           echo "CONFIG_PACKAGE_kmod-brcmfmac=y" >> .config
           echo "CONFIG_PACKAGE_brcmfmac-firmware-43430-sdio=y" >> .config
@@ -46,7 +57,7 @@ jobs:
           echo "CONFIG_PACKAGE_iwinfo=y" >> .config
           echo "CONFIG_PACKAGE_wpad-basic-mbedtls=y" >> .config
           
-          # 3. 启用 DTS 中 mmc2 SDIO WiFi 节点的 status = "okay"
+          # 5. 启用 DTS 中 mmc2 SDIO WiFi 节点的 status = "okay"
           DTS_FILE=$(find target/linux/sunxi/ -iname "*nanopi*r1s*.dts" 2>/dev/null | head -n 1)
           if [ -n "$DTS_FILE" ]; then
             sed -i '/&mmc2/,/};/s/status = "disabled";/status = "okay";/' "$DTS_FILE"
@@ -63,8 +74,20 @@ jobs:
         run: |
           make -j$(nproc) || make -j1 V=s
 
+      - name: Organize Artifacts
+        run: |
+          mkdir -p bin/out
+          # 拷贝编译诊断信息与 buildinfo 文件
+          cp -f bin/targets/sunxi/cortexa7/*.buildinfo bin/out/ 2>/dev/null || true
+          cp -f bin/targets/sunxi/cortexa7/*.manifest bin/out/ 2>/dev/null || true
+          cp -f bin/targets/sunxi/cortexa7/profiles.json bin/out/profiles 2>/dev/null || true
+          cp -f bin/targets/sunxi/cortexa7/sha256sums bin/out/ 2>/dev/null || true
+          
+          # 拷贝镜像（包含 TF 卡使用的 .img.gz 以及 Docker 使用的 rootfs.tar.gz）
+          cp -f bin/targets/sunxi/cortexa7/*nanopi-r1s-h3*.* bin/out/ 2>/dev/null || true
+
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ImmortalWrt-NanoPi-R1S-H3
-          path: bin/targets/sunxi/cortexa7/*.img.gz
+          path: bin/out/*
