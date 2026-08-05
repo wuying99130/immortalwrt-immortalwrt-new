@@ -51,23 +51,22 @@ jobs:
           if [ -n "$DTS_FILE" ]; then
             echo "Applying SDIO overlay to: $DTS_FILE"
             sed -i '/&mmc2/,/};/s/status = "disabled";/status = "okay";/' "$DTS_FILE"
-            cat << 'EOF' >> "$DTS_FILE"
-
-&mmc2 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&mmc2_8bit_pins>;
-	vmmc-supply = <&reg_vcc3v3>;
-	vqmmc-supply = <&reg_vcc3v3>;
-	bus-width = <4>;
-	non-removable;
-	status = "okay";
-
-	brcmf: wifi@1 {
-		reg = <1>;
-		compatible = "brcm,bcm4329-fmac";
-	};
-};
-EOF
+            
+            echo '' >> "$DTS_FILE"
+            echo '&mmc2 {' >> "$DTS_FILE"
+            echo '	pinctrl-names = "default";' >> "$DTS_FILE"
+            echo '	pinctrl-0 = <&mmc2_8bit_pins>;' >> "$DTS_FILE"
+            echo '	vmmc-supply = <&reg_vcc3v3>;' >> "$DTS_FILE"
+            echo '	vqmmc-supply = <&reg_vcc3v3>;' >> "$DTS_FILE"
+            echo '	bus-width = <4>;' >> "$DTS_FILE"
+            echo '	non-removable;' >> "$DTS_FILE"
+            echo '	status = "okay";' >> "$DTS_FILE"
+            echo '' >> "$DTS_FILE"
+            echo '	brcmf: wifi@1 {' >> "$DTS_FILE"
+            echo '		reg = <1>;' >> "$DTS_FILE"
+            echo '		compatible = "brcm,bcm4329-fmac";' >> "$DTS_FILE"
+            echo '	};' >> "$DTS_FILE"
+            echo '};' >> "$DTS_FILE"
           fi
           
           make defconfig
