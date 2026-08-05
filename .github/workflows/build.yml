@@ -29,17 +29,24 @@ jobs:
       - name: Apply Configuration
         run: |
           cp r1s-h3.config.seed .config
+          
+          # 1. 补全 AP6212/BCM43430 驱动、固件包以及 RFKILL GPIO 支持
           echo "CONFIG_BRCMFMAC_SDIO=y" >> .config
           echo "# CONFIG_BRCMFMAC_USB is not set" >> .config
+          echo "CONFIG_PACKAGE_kmod-brcmfmac=y" >> .config
+          echo "CONFIG_PACKAGE_brcmfmac-firmware-43430-sdio=y" >> .config
+          echo "CONFIG_PACKAGE_armbian-firmware-nanopi=y" >> .config
+          echo "CONFIG_PACKAGE_kmod-rfkill-gpio=y" >> .config
           
-          # 1. 查找 NanoPi R1 设备树文件路径
+          # 2. 定位 DTS 文件并注入包含物理 GPIO 唤醒引脚的完整声明
           DTS_FILE=$(find target/linux/ -iname "*nanopi*r1*.dts" 2>/dev/null | head -n 1)
           echo "Target DTS File: $DTS_FILE"
           
-          # 2. 安全追加 mmc2 上电与 SDIO 总线属性，避免 YAML EOF 语法错乱
           if [ -n "$DTS_FILE" ]; then
             echo '' >> "$DTS_FILE"
             echo '&mmc2 {' >> "$DTS_FILE"
+            echo '	pinctrl-names = "default";' >> "$DTS_FILE"
+            echo '	pinctrl-0 = <&mmc2_pins>;' >> "$DTS_FILE"
             echo '	vmmc-supply = <&reg_vcc3v3>;' >> "$DTS_FILE"
             echo '	vqmmc-supply = <&reg_vcc3v3>;' >> "$DTS_FILE"
             echo '	bus-width = <4>;' >> "$DTS_FILE"
