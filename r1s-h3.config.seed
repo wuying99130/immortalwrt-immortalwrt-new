@@ -1,36 +1,49 @@
-# 1. NanoPi R1S-H3 专属目标平台 Profile
+# 1. 精准锁定 NanoPi R1S-H3 目标 Profile (关闭全板卡全选)
 CONFIG_TARGET_sunxi=y
 CONFIG_TARGET_sunxi_cortexa7=y
 CONFIG_TARGET_DEVICE_sunxi_cortexa7_DEVICE_friendlyarm_nanopi-r1s-h3=y
+CONFIG_TARGET_ALL_PROFILES=n
+CONFIG_PACKAGE_uboot-sunxi-nanopi_r1s_h3=y
 
-# 2. 板载 LAN 口 USB RTL8152 网卡驱动
+# 2. 镜像生成控制（生成 TF 卡 img + Docker 用 rootfs.tar.gz）
+CONFIG_TARGET_ROOTFS_EXT4FS=y
+CONFIG_TARGET_ROOTFS_SQUASHFS=y
+CONFIG_TARGET_ROOTFS_TARGZ=y
+
+# 3. 简体中文语言界面（默认中文）
+CONFIG_LUCI_LANG_zh_Hans=y
+CONFIG_PACKAGE_luci-i18n-base-zh-cn=y
+CONFIG_PACKAGE_luci-i18n-opkg-zh-cn=y
+CONFIG_PACKAGE_luci-i18n-firewall-zh-cn=y
+
+# 4. 板载 LAN 口 USB RTL8152 网卡驱动
 CONFIG_PACKAGE_kmod-usb-net-rtl8152=y
 
-# 3. AP6212 (BCM43430) SDIO 无线核心驱动与固件
+# 5. AP6212 (BCM43430) SDIO 无线核心驱动与固件
 CONFIG_PACKAGE_kmod-brcmfmac=y
 CONFIG_PACKAGE_brcmfmac-firmware-43430-sdio=y
 CONFIG_PACKAGE_cypress-firmware-43430-sdio=y
 
-# 4. 无线协议栈与底层管理工具
+# 6. 无线协议栈与底层管理工具
 CONFIG_PACKAGE_iw=y
 CONFIG_PACKAGE_iwinfo=y
 CONFIG_PACKAGE_wpad-basic-mbedtls=y
 
-# 5. 软件源与基础系统工具
+# 7. 基础系统与网络工具
 CONFIG_PACKAGE_opkg=y
 CONFIG_PACKAGE_busybox=y
 CONFIG_PACKAGE_ca-certificates=y
 CONFIG_PACKAGE_curl=y
 CONFIG_PACKAGE_wget-ssl=y
 
-# 6. LuCI Web 管理界面
+# 8. LuCI Web 管理界面与主题
 CONFIG_PACKAGE_uhttpd=y
 CONFIG_PACKAGE_uhttpd-mod-ubus=y
 CONFIG_PACKAGE_luci=y
 CONFIG_PACKAGE_luci-mod-admin-full=y
 CONFIG_PACKAGE_luci-theme-argon=y
 
-# 7. 磁盘与扩展工具
+# 9. 磁盘与扩展工具
 CONFIG_PACKAGE_e2fsprogs=y
 CONFIG_PACKAGE_fdisk=y
 CONFIG_PACKAGE_parted=y
