@@ -3,12 +3,13 @@ CONFIG_TARGET_sunxi_cortexa7=y
 CONFIG_TARGET_sunxi_cortexa7_DEVICE_friendlyarm_nanopi-r1=y
 CONFIG_LUCI_LANG_zh_Hans=y
 
-# 1. 博通 SDIO 模式无线驱动与固件（强制启用 SDIO，禁用 USB）
+# 1. 博通 SDIO 模式无线驱动与固件（专为 AP6212 / BCM43430 优化）
 CONFIG_PACKAGE_kmod-brcmfmac=y
 CONFIG_BRCMFMAC_SDIO=y
 # CONFIG_BRCMFMAC_USB is not set
-CONFIG_PACKAGE_cypress-firmware-43430-sdio=y
+# CONFIG_PACKAGE_cypress-firmware-43430-sdio is not set
 CONFIG_PACKAGE_brcmfmac-firmware-43430-sdio=y
+CONFIG_PACKAGE_armbian-firmware-nanopi=y
 CONFIG_PACKAGE_kmod-usb-net-rtl8152=y
 CONFIG_PACKAGE_kmod-leds-gpio=y
 
@@ -63,11 +64,10 @@ CONFIG_PACKAGE_ucode-mod-math=y
 CONFIG_PACKAGE_uhttpd=y
 CONFIG_PACKAGE_uhttpd-mod-ubus=y
 
-# 4. 无线管理工具与加密
+# 4. 无线管理工具与加密（换用更稳定的 mbedtls 协议栈）
 CONFIG_PACKAGE_wireless-tools=y
 CONFIG_PACKAGE_hostapd-common=y
-CONFIG_PACKAGE_wpad-basic-wolfssl=y
-CONFIG_WOLFSSL_HAS_NO_HW=y
-CONFIG_WPA_WOLFSSL=y
+CONFIG_PACKAGE_wpad-basic-mbedtls=y
 
+# 5. 分区容量调整
 CONFIG_TARGET_ROOTFS_PARTSIZE=380
