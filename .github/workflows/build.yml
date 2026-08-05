@@ -26,19 +26,22 @@ jobs:
           ./scripts/feeds update -a
           ./scripts/feeds install -a
 
-      - name: Apply Custom Configurations & Single Device Lock
+      - name: Apply Custom Configurations & Hardware Patches
         run: |
-          # 1. 复制种子配置文件
+          # 1. 复制基础种子配置
           cp r1s-h3.config.seed .config
 
-          # 2. 强制注入目标架构与唯一 Profile 锁定
-          echo "CONFIG_TARGET_sunxi=y" >> .config
-          echo "CONFIG_TARGET_sunxi_cortexa7=y" >> .config
-          echo "CONFIG_TARGET_MULTI_PROFILE=y" >> .config
-          echo "# CONFIG_TARGET_ALL_PROFILES is not set" >> .config
-          echo "CONFIG_TARGET_DEVICE_sunxi_cortexa7_DEVICE_friendlyarm_nanopi-r1s-h3=y" >> .config
+          # 2. 修改默认 LAN 口 IP 为 192.168.199.1，开启权威 DHCP 模式
+          sed -i 's/192.168.1.1/192.168.199.1/g' package/base-files/files/bin/config_generate
+          sed -i '/config dnsmasq/a \thoption authoritative 1' package/network/services/dnsmasq/files/dhcp.conf 2>/dev/null || true
 
-          # 3. 展开并补全依赖关系
+          # 3. 激活 DTS 文件中的 mmc2 SDIO WiFi 节点
+          DTS_FILE=$(find target/linux/sunxi/ -iname "*nanopi*r1s*.dts" 2>/dev/null | head -n 1)
+          if [ -n "$DTS_FILE" ]; then
+            sed -i '/&mmc2/,/};/s/status = "disabled";/status = "okay";/' "$DTS_FILE"
+          fi
+
+          # 4. 展开并补全依赖关系
           make defconfig
 
       - name: Download Package Dependencies
@@ -50,8 +53,20 @@ jobs:
         run: |
           make -j$(nproc) || make -j1 V=s
 
+      - name: Organize Artifacts
+        run: |
+          mkdir -p bin/out
+          # 收集编译诊断元数据文件
+          cp -f bin/targets/sunxi/cortexa7/*.buildinfo bin/out/ 2>/dev/null || true
+          cp -f bin/targets/sunxi/cortexa7/*.manifest bin/out/ 2>/dev/null || true
+          cp -f bin/targets/sunxi/cortexa7/profiles.json bin/out/profiles 2>/dev/null || true
+          cp -f bin/targets/sunxi/cortexa7/sha256sums bin/out/ 2>/dev/null || true
+          
+          # 仅提取 NanoPi R1S-H3 的专属固件 (包含 img.gz 与 Docker rootfs.tar.gz)
+          cp -f bin/targets/sunxi/cortexa7/*nanopi-r1s-h3*.* bin/out/ 2>/dev/null || true
+
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ImmortalWrt_NanoPi_R1S-H3
-          path: bin/targets/sunxi/cortexa7/
+          path: bin/out/*
