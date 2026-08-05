@@ -30,7 +30,7 @@ jobs:
         run: |
           cp r1s-h3.config.seed .config
           
-          # 1. 补全 AP6212/BCM43430 驱动、固件包以及 RFKILL GPIO 支持
+          # 1. 补全驱动与固件
           echo "CONFIG_BRCMFMAC_SDIO=y" >> .config
           echo "# CONFIG_BRCMFMAC_USB is not set" >> .config
           echo "CONFIG_PACKAGE_kmod-brcmfmac=y" >> .config
@@ -38,17 +38,28 @@ jobs:
           echo "CONFIG_PACKAGE_armbian-firmware-nanopi=y" >> .config
           echo "CONFIG_PACKAGE_kmod-rfkill-gpio=y" >> .config
           
-          # 2. 定位 DTS 文件并注入包含物理 GPIO 唤醒引脚的完整声明
+          # 2. 修改 NanoPi R1 DTS，补全完整的 SDIO 控制器与 WiFi 电源定义
           DTS_FILE=$(find target/linux/ -iname "*nanopi*r1*.dts" 2>/dev/null | head -n 1)
           echo "Target DTS File: $DTS_FILE"
           
           if [ -n "$DTS_FILE" ]; then
             echo '' >> "$DTS_FILE"
+            echo '/ {' >> "$DTS_FILE"
+            echo '	reg_wifi_en: fixedregulator@0 {' >> "$DTS_FILE"
+            echo '		compatible = "regulator-fixed";' >> "$DTS_FILE"
+            echo '		regulator-name = "wifi-enable";' >> "$DTS_FILE"
+            echo '		regulator-min-microvolt = <3300000>;' >> "$DTS_FILE"
+            echo '		regulator-max-microvolt = <3300000>;' >> "$DTS_FILE"
+            echo '		gpio = <&r_pio 0 7 0>; /* PL7 */' >> "$DTS_FILE"
+            echo '		enable-active-high;' >> "$DTS_FILE"
+            echo '	};' >> "$DTS_FILE"
+            echo '};' >> "$DTS_FILE"
+            echo '' >> "$DTS_FILE"
             echo '&mmc2 {' >> "$DTS_FILE"
             echo '	pinctrl-names = "default";' >> "$DTS_FILE"
-            echo '	pinctrl-0 = <&mmc2_pins>;' >> "$DTS_FILE"
+            echo '	pinctrl-0 = <&mmc2_8bit_pins>;' >> "$DTS_FILE"
             echo '	vmmc-supply = <&reg_vcc3v3>;' >> "$DTS_FILE"
-            echo '	vqmmc-supply = <&reg_vcc3v3>;' >> "$DTS_FILE"
+            echo '	vqmmc-supply = <&reg_wifi_en>;' >> "$DTS_FILE"
             echo '	bus-width = <4>;' >> "$DTS_FILE"
             echo '	non-removable;' >> "$DTS_FILE"
             echo '	status = "okay";' >> "$DTS_FILE"
