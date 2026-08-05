@@ -30,40 +30,44 @@ jobs:
         run: |
           cp r1s-h3.config.seed .config
           
-          # 1. 补全驱动与固件
+          # 1. 明确指定 Target 设备 Profile 为 FriendlyARM NanoPi R1
+          echo "CONFIG_TARGET_sunxi=y" >> .config
+          echo "CONFIG_TARGET_sunxi_cortexa7=y" >> .config
+          echo "CONFIG_TARGET_DEVICE_sunxi_cortexa7_DEVICE_friendlyarm_nanopi-r1=y" >> .config
+          
+          # 2. 补充板载第二网口 RTL8152 USB 网卡驱动
+          echo "CONFIG_PACKAGE_kmod-usb-net-rtl8152=y" >> .config
+          
+          # 3. 补充 AP6212/BCM43430 SDIO 无线驱动、固件包及 Wireless 协议栈
           echo "CONFIG_BRCMFMAC_SDIO=y" >> .config
           echo "# CONFIG_BRCMFMAC_USB is not set" >> .config
           echo "CONFIG_PACKAGE_kmod-brcmfmac=y" >> .config
           echo "CONFIG_PACKAGE_brcmfmac-firmware-43430-sdio=y" >> .config
           echo "CONFIG_PACKAGE_armbian-firmware-nanopi=y" >> .config
-          echo "CONFIG_PACKAGE_kmod-rfkill-gpio=y" >> .config
+          echo "CONFIG_PACKAGE_wpad-basic-mbedtls=y" >> .config
           
-          # 2. 修改 NanoPi R1 DTS，补全完整的 SDIO 控制器与 WiFi 电源定义
-          DTS_FILE=$(find target/linux/ -iname "*nanopi*r1*.dts" 2>/dev/null | head -n 1)
-          echo "Target DTS File: $DTS_FILE"
-          
+          # 4. 在 DTS 中激活 mmc2 SDIO WiFi 节点
+          DTS_FILE=$(find target/linux/sunxi/ -iname "*nanopi*r1*.dts" 2>/dev/null | head -n 1)
           if [ -n "$DTS_FILE" ]; then
-            echo '' >> "$DTS_FILE"
-            echo '/ {' >> "$DTS_FILE"
-            echo '	reg_wifi_en: fixedregulator@0 {' >> "$DTS_FILE"
-            echo '		compatible = "regulator-fixed";' >> "$DTS_FILE"
-            echo '		regulator-name = "wifi-enable";' >> "$DTS_FILE"
-            echo '		regulator-min-microvolt = <3300000>;' >> "$DTS_FILE"
-            echo '		regulator-max-microvolt = <3300000>;' >> "$DTS_FILE"
-            echo '		gpio = <&r_pio 0 7 0>; /* PL7 */' >> "$DTS_FILE"
-            echo '		enable-active-high;' >> "$DTS_FILE"
-            echo '	};' >> "$DTS_FILE"
-            echo '};' >> "$DTS_FILE"
-            echo '' >> "$DTS_FILE"
-            echo '&mmc2 {' >> "$DTS_FILE"
-            echo '	pinctrl-names = "default";' >> "$DTS_FILE"
-            echo '	pinctrl-0 = <&mmc2_8bit_pins>;' >> "$DTS_FILE"
-            echo '	vmmc-supply = <&reg_vcc3v3>;' >> "$DTS_FILE"
-            echo '	vqmmc-supply = <&reg_wifi_en>;' >> "$DTS_FILE"
-            echo '	bus-width = <4>;' >> "$DTS_FILE"
-            echo '	non-removable;' >> "$DTS_FILE"
-            echo '	status = "okay";' >> "$DTS_FILE"
-            echo '};' >> "$DTS_FILE"
+            echo "Applying SDIO overlay to: $DTS_FILE"
+            sed -i '/&mmc2/,/};/s/status = "disabled";/status = "okay";/' "$DTS_FILE"
+            cat << 'EOF' >> "$DTS_FILE"
+
+&mmc2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&mmc2_8bit_pins>;
+	vmmc-supply = <&reg_vcc3v3>;
+	vqmmc-supply = <&reg_vcc3v3>;
+	bus-width = <4>;
+	non-removable;
+	status = "okay";
+
+	brcmf: wifi@1 {
+		reg = <1>;
+		compatible = "brcm,bcm4329-fmac";
+	};
+};
+EOF
           fi
           
           make defconfig
