@@ -28,80 +28,30 @@ jobs:
 
       - name: Apply Custom Configurations & Single Device Lock
         run: |
+          # 1. 复制种子配置文件
           cp r1s-h3.config.seed .config
-          
-          # 1. 强制注入目标架构与唯一 Profile
+
+          # 2. 强制注入目标架构与唯一 Profile 锁定
           echo "CONFIG_TARGET_sunxi=y" >> .config
           echo "CONFIG_TARGET_sunxi_cortexa7=y" >> .config
+          echo "CONFIG_TARGET_MULTI_PROFILE=y" >> .config
+          echo "# CONFIG_TARGET_ALL_PROFILES is not set" >> .config
           echo "CONFIG_TARGET_DEVICE_sunxi_cortexa7_DEVICE_friendlyarm_nanopi-r1s-h3=y" >> .config
-          echo "CONFIG_TARGET_ALL_PROFILES=n" >> .config
-          echo "CONFIG_PACKAGE_uboot-sunxi-nanopi_r1s_h3=y" >> .config
-          
-          # 2. 导出格式支持 (TF卡 .img + Docker .tar.gz)
-          echo "CONFIG_TARGET_ROOTFS_EXT4FS=y" >> .config
-          echo "CONFIG_TARGET_ROOTFS_SQUASHFS=y" >> .config
-          echo "CONFIG_TARGET_ROOTFS_TARGZ=y" >> .config
-          
-          # 3. 强制写入简体中文语言包
-          echo "CONFIG_LUCI_LANG_zh_Hans=y" >> .config
-          echo "CONFIG_PACKAGE_luci-i18n-base-zh-cn=y" >> .config
-          echo "CONFIG_PACKAGE_luci-i18n-opkg-zh-cn=y" >> .config
-          echo "CONFIG_PACKAGE_luci-i18n-firewall-zh-cn=y" >> .config
-          
-          # 4. 网卡与无线驱动选型（保持15版成功配置）
-          echo "CONFIG_PACKAGE_kmod-usb-net-rtl8152=y" >> .config
-          echo "CONFIG_PACKAGE_kmod-brcmfmac=y" >> .config
-          echo "CONFIG_PACKAGE_brcmfmac-firmware-43430-sdio=y" >> .config
-          echo "CONFIG_PACKAGE_cypress-firmware-43430-sdio=y" >> .config
-          echo "CONFIG_PACKAGE_iw=y" >> .config
-          echo "CONFIG_PACKAGE_iwinfo=y" >> .config
-          echo "CONFIG_PACKAGE_wpad-basic-mbedtls=y" >> .config
-          
-          # 5. 开启 DTS mmc2 SDIO WiFi 节点
-          DTS_FILE=$(find target/linux/sunxi/ -iname "*nanopi*r1s*.dts" 2>/dev/null | head -n 1)
-          if [ -n "$DTS_FILE" ]; then
-            sed -i '/&mmc2/,/};/s/status = "disabled";/status = "okay";/' "$DTS_FILE"
-          fi
 
-          # 6. 核心净化：清除展开后的所有其他单板 Profile，源头禁止编译无关固件
-          make defconfig
-          sed -i '/CONFIG_TARGET_DEVICE_sunxi_cortexa7_DEVICE_/d' .config
-          echo "CONFIG_TARGET_DEVICE_sunxi_cortexa7_DEVICE_friendlyarm_nanopi-r1s-h3=y" >> .config
+          # 3. 展开并补全依赖关系
           make defconfig
 
-          # 7. 写入自定义网络逻辑（默认 IP 192.168.199.1 + 权威 DHCP 秒连）
-          mkdir -p files/etc/uci-defaults
-          cat << 'EOF' > files/etc/uci-defaults/99-custom-ip
-          uci set network.lan.ipaddr='192.168.199.1'
-          uci set dhcp.lan.authoritative='1'
-          uci commit network
-          uci commit dhcp
-          EOF
-          chmod +x files/etc/uci-defaults/99-custom-ip
-
-      - name: Download Package Toolchain
+      - name: Download Package Dependencies
         run: |
-          make download -j8
+          make download -j$(nproc)
           find dl -size -1024c -exec rm -f {} \;
 
       - name: Compile Firmware
         run: |
           make -j$(nproc) || make -j1 V=s
 
-      - name: Organize Artifacts
-        run: |
-          mkdir -p bin/out
-          # 1. 收集诊断元数据文件
-          cp -f bin/targets/sunxi/cortexa7/*.buildinfo bin/out/ 2>/dev/null || true
-          cp -f bin/targets/sunxi/cortexa7/*.manifest bin/out/ 2>/dev/null || true
-          cp -f bin/targets/sunxi/cortexa7/profiles.json bin/out/profiles 2>/dev/null || true
-          cp -f bin/targets/sunxi/cortexa7/sha256sums bin/out/ 2>/dev/null || true
-          
-          # 2. 提取专属固件镜像与 rootfs
-          cp -f bin/targets/sunxi/cortexa7/*nanopi-r1s-h3* bin/out/ 2>/dev/null || true
-
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ImmortalWrt-NanoPi-R1S-H3
-          path: bin/out/*
+          name: ImmortalWrt_NanoPi_R1S-H3
+          path: bin/targets/sunxi/cortexa7/
