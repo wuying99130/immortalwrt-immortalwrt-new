@@ -30,11 +30,14 @@ jobs:
         run: |
           cp r1s-h3.config.seed .config
           
-          # 追加 NanoPi R1S-H3 设备 Profile 与无线驱动选型
+          # 1. 锁定 NanoPi R1S-H3 Profile 并禁用其它全志板卡的 U-Boot 编译
           echo "CONFIG_TARGET_sunxi=y" >> .config
           echo "CONFIG_TARGET_sunxi_cortexa7=y" >> .config
           echo "CONFIG_TARGET_DEVICE_sunxi_cortexa7_DEVICE_friendlyarm_nanopi-r1s-h3=y" >> .config
+          echo "CONFIG_TARGET_ALL_PROFILES=n" >> .config
+          echo "CONFIG_PACKAGE_uboot-sunxi-nanopi_r1s_h3=y" >> .config
           
+          # 2. 板载 USB LAN 网卡与 AP6212 (BCM43430) SDIO 无线驱动与固件
           echo "CONFIG_PACKAGE_kmod-usb-net-rtl8152=y" >> .config
           echo "CONFIG_PACKAGE_kmod-brcmfmac=y" >> .config
           echo "CONFIG_PACKAGE_brcmfmac-firmware-43430-sdio=y" >> .config
@@ -43,7 +46,7 @@ jobs:
           echo "CONFIG_PACKAGE_iwinfo=y" >> .config
           echo "CONFIG_PACKAGE_wpad-basic-mbedtls=y" >> .config
           
-          # 精准替换 DTS 文件中的 mmc2 (SDIO WiFi) 禁用状态为 okay
+          # 3. 启用 DTS 中 mmc2 SDIO WiFi 节点的 status = "okay"
           DTS_FILE=$(find target/linux/sunxi/ -iname "*nanopi*r1s*.dts" 2>/dev/null | head -n 1)
           if [ -n "$DTS_FILE" ]; then
             sed -i '/&mmc2/,/};/s/status = "disabled";/status = "okay";/' "$DTS_FILE"
