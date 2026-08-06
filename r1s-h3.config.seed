@@ -1,20 +1,20 @@
-# 1. 目标平台锁定 (严格对齐 14/15 版成功的单设备名，坚决不触发多设备全系列编译)
+# 1. 目标平台锁定 (严格对齐 NanoPi R1S-H3 正确设备名)
 CONFIG_TARGET_sunxi=y
 CONFIG_TARGET_sunxi_cortexa7=y
-CONFIG_TARGET_sunxi_cortexa7_DEVICE_friendlyarm_nanopi-r1=y
+CONFIG_TARGET_sunxi_cortexa7_DEVICE_friendlyarm_nanopi-r1s-h3=y
 
-# 2. 改进 3：同时输出 TF 卡 img.gz 与 Docker rootfs.tar.gz
+# 2. 同时输出 TF 卡 img.gz 与 Docker rootfs.tar.gz
 CONFIG_TARGET_ROOTFS_EXT4FS=y
 CONFIG_TARGET_ROOTFS_SQUASHFS=y
 CONFIG_TARGET_ROOTFS_TARGZ=y
 
-# 3. 改进 1：默认简体中文界面
+# 3. 默认简体中文界面
 CONFIG_LUCI_LANG_zh_Hans=y
 CONFIG_PACKAGE_luci-i18n-base-zh-cn=y
 CONFIG_PACKAGE_luci-i18n-opkg-zh-cn=y
 CONFIG_PACKAGE_luci-i18n-firewall-zh-cn=y
 
-# 4. 15版验证成功的无线 WiFi 与有线网卡硬件驱动 (不动)
+# 4. 有线与 AP6212 无线 WiFi 硬件驱动 (15版成功配置，保持不动)
 CONFIG_PACKAGE_kmod-usb-net-rtl8152=y
 CONFIG_PACKAGE_kmod-brcmfmac=y
 CONFIG_BRCMFMAC_SDIO=y
