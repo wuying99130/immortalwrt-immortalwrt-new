@@ -63,8 +63,15 @@ jobs:
       - name: Organize Artifacts
         run: |
           mkdir -p bin/out
-          # 只把 r1s-h3 的固件复制到输出目录，彻底丢弃其他无关板子
-          find bin/targets/sunxi/cortexa7/ -type f -name "*nanopi-r1s-h3*" -exec cp -f {} bin/out/ \;
+          
+          echo "=== 正在扫描编译产物目录以供核对 ==="
+          find bin/targets/sunxi/ -type f || true
+          
+          # 精准筛选 r1s-h3 相关的固件复制到输出目录
+          find bin/targets/sunxi/ -type f \( -name "*r1s*h3*" -o -name "*nanopi-r1s*" \) -exec cp -f {} bin/out/ \;
+          
+          echo "=== 最终打包输出目录文件清单 ==="
+          ls -lh bin/out/
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
