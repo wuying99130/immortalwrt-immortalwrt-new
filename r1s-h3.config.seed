@@ -1,33 +1,45 @@
-# 1. 目标平台锁定 (第 2 点：14 版单设备锁定方式，禁用 Profile 膨胀)
+# 1. 目标平台锁定 (严格对齐 14/15 版成功的单设备名，坚决不触发多设备全系列编译)
 CONFIG_TARGET_sunxi=y
 CONFIG_TARGET_sunxi_cortexa7=y
-CONFIG_TARGET_sunxi_cortexa7_DEVICE_friendlyarm_nanopi-r1s-h3=y
+CONFIG_TARGET_sunxi_cortexa7_DEVICE_friendlyarm_nanopi-r1=y
 
-# 2. 镜像生成控制 (第 3 点：输出 img.gz 和 Docker rootfs.tar.gz)
+# 2. 改进 3：同时输出 TF 卡 img.gz 与 Docker rootfs.tar.gz
 CONFIG_TARGET_ROOTFS_EXT4FS=y
 CONFIG_TARGET_ROOTFS_SQUASHFS=y
 CONFIG_TARGET_ROOTFS_TARGZ=y
 
-# 3. 简体中文语言界面 (第 1 点：默认简体中文)
+# 3. 改进 1：默认简体中文界面
 CONFIG_LUCI_LANG_zh_Hans=y
 CONFIG_PACKAGE_luci-i18n-base-zh-cn=y
 CONFIG_PACKAGE_luci-i18n-opkg-zh-cn=y
 CONFIG_PACKAGE_luci-i18n-firewall-zh-cn=y
 
-# 4. 板载 LAN 口 USB RTL8152 网卡驱动 (15 版硬件驱动，保持不动)
+# 4. 15版验证成功的无线 WiFi 与有线网卡硬件驱动 (不动)
 CONFIG_PACKAGE_kmod-usb-net-rtl8152=y
-
-# 5. AP6212 (BCM43430) SDIO 无线核心驱动与固件 (15 版硬件驱动，保持不动)
 CONFIG_PACKAGE_kmod-brcmfmac=y
+CONFIG_BRCMFMAC_SDIO=y
+# CONFIG_BRCMFMAC_USB is not set
 CONFIG_PACKAGE_brcmfmac-firmware-43430-sdio=y
-CONFIG_PACKAGE_cypress-firmware-43430-sdio=y
-
-# 6. 无线协议栈与管理工具 (15 版硬件驱动，保持不动)
+CONFIG_PACKAGE_armbian-firmware-nanopi=y
 CONFIG_PACKAGE_iw=y
 CONFIG_PACKAGE_iwinfo=y
 CONFIG_PACKAGE_wpad-basic-mbedtls=y
 
-# 7. LuCI 基础界面组件
+# 5. 底层总线与驱动支持
+CONFIG_PACKAGE_kmod-rfkill=y
+CONFIG_PACKAGE_kmod-rfkill-gpio=y
+CONFIG_PACKAGE_rfkill=y
+CONFIG_PACKAGE_kmod-mmc=y
+CONFIG_PACKAGE_kmod-mmc-sunxi=y
+CONFIG_PACKAGE_kmod-sdhci=y
+CONFIG_PACKAGE_kmod-regulator=y
+CONFIG_PACKAGE_kmod-regulator-fixed=y
+CONFIG_PACKAGE_kmod-leds-gpio=y
+
+# 6. LuCI 基础组件
+CONFIG_PACKAGE_cgi-io=y
+CONFIG_PACKAGE_default-settings=y
+CONFIG_PACKAGE_default-settings-chn=y
 CONFIG_PACKAGE_uhttpd=y
 CONFIG_PACKAGE_uhttpd-mod-ubus=y
 CONFIG_PACKAGE_luci=y
@@ -38,3 +50,6 @@ CONFIG_PACKAGE_busybox=y
 CONFIG_PACKAGE_ca-certificates=y
 CONFIG_PACKAGE_curl=y
 CONFIG_PACKAGE_wget-ssl=y
+
+# 7. 分区容量调整
+CONFIG_TARGET_ROOTFS_PARTSIZE=380
