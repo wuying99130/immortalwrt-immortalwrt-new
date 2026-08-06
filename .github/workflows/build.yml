@@ -60,8 +60,14 @@ jobs:
         run: |
           make -j$(nproc) || make -j1 V=s
 
+      - name: Organize Artifacts
+        run: |
+          mkdir -p bin/out
+          # 只把 r1s-h3 的固件复制到输出目录，彻底丢弃其他无关板子
+          find bin/targets/sunxi/cortexa7/ -type f -name "*nanopi-r1s-h3*" -exec cp -f {} bin/out/ \;
+
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ImmortalWrt-NanoPi-R1S-H3
-          path: bin/targets/sunxi/cortexa7/*.img.gz
+          path: bin/out/*
