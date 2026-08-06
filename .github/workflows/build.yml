@@ -30,13 +30,13 @@ jobs:
         run: |
           cp r1s-h3.config.seed .config
           
-          # 1. 严格锁定 NanoPi R1 设备，防止全系列多 Profile 膨胀 (改进 2)
+          # 1. 严格锁定 NanoPi R1S-H3 设备名
           echo "CONFIG_TARGET_sunxi=y" >> .config
           echo "CONFIG_TARGET_sunxi_cortexa7=y" >> .config
-          echo "CONFIG_TARGET_DEVICE_sunxi_cortexa7_DEVICE_friendlyarm_nanopi-r1=y" >> .config
+          echo "CONFIG_TARGET_sunxi_cortexa7_DEVICE_friendlyarm_nanopi-r1s-h3=y" >> .config
           
-          # 2. 注入 15 版验证成功的 DTS 无线 WiFi 节点激活逻辑 (确保 WiFi 有效)
-          DTS_FILE=$(find target/linux/sunxi/ -iname "*nanopi*r1*.dts" 2>/dev/null | head -n 1)
+          # 2. 匹配并激活 R1S-H3 的 DTS 无线 WiFi 节点
+          DTS_FILE=$(find target/linux/sunxi/ -iname "*nanopi*r1s*.dts" 2>/dev/null | head -n 1)
           if [ -n "$DTS_FILE" ]; then
             echo "Applying SDIO overlay to: $DTS_FILE"
             sed -i '/&mmc2/,/};/s/status = "disabled";/status = "okay";/' "$DTS_FILE"
@@ -58,7 +58,7 @@ jobs:
             echo '};' >> "$DTS_FILE"
           fi
           
-          # 3. 改进 5：LAN 口 IP 设为 192.168.199.1 & 开启权威 DHCP 模式防冲突
+          # 3. 设置默认 LAN IP 为 192.168.199.1 & 开启权威 DHCP 模式秒连
           UCI_CUSTOM="package/base-files/files/bin/config_generate"
           if [ -f "$UCI_CUSTOM" ]; then
             sed -i 's/192.168.1.1/192.168.199.1/g' "$UCI_CUSTOM"
@@ -78,13 +78,13 @@ jobs:
         run: |
           mkdir -p bin/out
           
-          # 4. 改进 4：全量诊断元数据文件打包
+          # 4. 全量诊断元数据文件打包
           cp -f bin/targets/sunxi/cortexa7/*.buildinfo bin/out/ 2>/dev/null || true
           cp -f bin/targets/sunxi/cortexa7/*.manifest bin/out/ 2>/dev/null || true
           cp -f bin/targets/sunxi/cortexa7/sha256sums bin/out/ 2>/dev/null || true
           
-          # 5. 精准提取专属目标固件 (img.gz / rootfs.tar.gz)，绝不产生多余垃圾文件
-          cp -f bin/targets/sunxi/cortexa7/*friendlyarm_nanopi-r1*.* bin/out/ 2>/dev/null || true
+          # 5. 精准提取 R1S-H3 专属固件包
+          cp -f bin/targets/sunxi/cortexa7/*friendlyarm_nanopi-r1s-h3*.* bin/out/ 2>/dev/null || true
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v5
