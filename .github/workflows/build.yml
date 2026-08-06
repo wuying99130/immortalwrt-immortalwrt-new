@@ -23,19 +23,35 @@ jobs:
 
       - name: Update Feeds
         run: |
+          # 自动清理可能导致克隆失败的 passwall 依赖源，防止网络鉴权报错
+          if [ -f "feeds.conf.default" ]; then
+            sed -i '/passwall/d' feeds.conf.default
+          fi
+          if [ -f "feeds.conf" ]; then
+            sed -i '/passwall/d' feeds.conf
+          fi
+          
           ./scripts/feeds update -a
           ./scripts/feeds install -a
 
       - name: Apply Configuration & WiFi Fixes
         run: |
-          cp r1s-h3.config.seed .config
+          if [ ! -f "r1s-h3.config.seed" ]; then
+            echo "Error: r1s-h3.config.seed not found in repository root!"
+            exit 1
+          fi
           
-          # 1. 严格锁定 NanoPi R1S-H3 设备名
+          cp -f r1s-h3.config.seed .config
+          
+          # 初始化配置树
+          make defconfig
+          
+          # 严格锁定 NanoPi R1S-H3 专属设备名
           echo "CONFIG_TARGET_sunxi=y" >> .config
           echo "CONFIG_TARGET_sunxi_cortexa7=y" >> .config
           echo "CONFIG_TARGET_sunxi_cortexa7_DEVICE_friendlyarm_nanopi-r1s-h3=y" >> .config
           
-          # 2. 匹配并激活 R1S-H3 的 DTS 无线 WiFi 节点
+          # 匹配并激活 R1S-H3 的 DTS 无线 WiFi 节点（完全保留第 15 版经验证的原版逻辑）
           DTS_FILE=$(find target/linux/sunxi/ -iname "*nanopi*r1s*.dts" 2>/dev/null | head -n 1)
           if [ -n "$DTS_FILE" ]; then
             echo "Applying SDIO overlay to: $DTS_FILE"
@@ -58,7 +74,7 @@ jobs:
             echo '};' >> "$DTS_FILE"
           fi
           
-          # 3. 设置默认 LAN IP 为 192.168.199.1 & 开启权威 DHCP 模式秒连
+          # 设置默认 LAN IP 为 192.168.199.1 & 开启权威 DHCP 模式秒连
           UCI_CUSTOM="package/base-files/files/bin/config_generate"
           if [ -f "$UCI_CUSTOM" ]; then
             sed -i 's/192.168.1.1/192.168.199.1/g' "$UCI_CUSTOM"
@@ -68,6 +84,7 @@ jobs:
             sed -i "/config dhcp 'lan'/a \\\toption authoritative '1'" "$DHCP_CONF"
           fi
           
+          # 最后统一执行 defconfig 固化所有配置
           make defconfig
 
       - name: Compile Firmware
@@ -77,13 +94,9 @@ jobs:
       - name: Organize Artifacts
         run: |
           mkdir -p bin/out
-          
-          # 4. 全量诊断元数据文件打包
           cp -f bin/targets/sunxi/cortexa7/*.buildinfo bin/out/ 2>/dev/null || true
           cp -f bin/targets/sunxi/cortexa7/*.manifest bin/out/ 2>/dev/null || true
           cp -f bin/targets/sunxi/cortexa7/sha256sums bin/out/ 2>/dev/null || true
-          
-          # 5. 精准提取 R1S-H3 专属固件包
           cp -f bin/targets/sunxi/cortexa7/*friendlyarm_nanopi-r1s-h3*.* bin/out/ 2>/dev/null || true
 
       - name: Upload Artifacts
