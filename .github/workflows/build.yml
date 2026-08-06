@@ -14,7 +14,7 @@ jobs:
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
-          sudo rm -rf /etc/apt/sources.list.d/* /usr/share/dotnet /usr/local/lib/android /opt/gh
+          sudo rm -rf /etc/apt/sources.list.d/* /usr/share/dotnet /usr/local/lib/android /opt/ghc
           sudo apt-get update
           sudo apt-get install -y build-essential clang flex bison gawk g++-multilib g++ \
             gettext git libncurses5-dev libssl-dev python3-distutils rsync unzip zlib1g-dev \
@@ -26,68 +26,42 @@ jobs:
           ./scripts/feeds update -a
           ./scripts/feeds install -a
 
-      - name: Apply Configuration & WiFi Fixes
+      - name: Update Configuration and DTS
         run: |
           cp r1s-h3.config.seed .config
           
-          # 1. 严格锁定 NanoPi R1S-H3 设备名（确保不漏配、不跑偏）
+          # 追加 NanoPi R1S-H3 设备 Profile 与无线驱动选型
           echo "CONFIG_TARGET_sunxi=y" >> .config
           echo "CONFIG_TARGET_sunxi_cortexa7=y" >> .config
-          echo "CONFIG_TARGET_sunxi_cortexa7_DEVICE_friendlyarm_nanopi-r1s-h3=y" >> .config
+          echo "CONFIG_TARGET_DEVICE_sunxi_cortexa7_DEVICE_friendlyarm_nanopi-r1s-h3=y" >> .config
           
-          # 2. 匹配并激活 R1S-H3 的 DTS 无线 WiFi 节点（完全沿用 15 版验证通过的底层逻辑）
+          echo "CONFIG_PACKAGE_kmod-usb-net-rtl8152=y" >> .config
+          echo "CONFIG_PACKAGE_kmod-brcmfmac=y" >> .config
+          echo "CONFIG_PACKAGE_brcmfmac-firmware-43430-sdio=y" >> .config
+          echo "CONFIG_PACKAGE_cypress-firmware-43430-sdio=y" >> .config
+          echo "CONFIG_PACKAGE_iw=y" >> .config
+          echo "CONFIG_PACKAGE_iwinfo=y" >> .config
+          echo "CONFIG_PACKAGE_wpad-basic-mbedtls=y" >> .config
+          
+          # 精准替换 DTS 文件中的 mmc2 (SDIO WiFi) 禁用状态为 okay
           DTS_FILE=$(find target/linux/sunxi/ -iname "*nanopi*r1s*.dts" 2>/dev/null | head -n 1)
           if [ -n "$DTS_FILE" ]; then
-            echo "Applying SDIO overlay to: $DTS_FILE"
             sed -i '/&mmc2/,/};/s/status = "disabled";/status = "okay";/' "$DTS_FILE"
-            
-            echo '' >> "$DTS_FILE"
-            echo '&mmc2 {' >> "$DTS_FILE"
-            echo '	pinctrl-names = "default";' >> "$DTS_FILE"
-            echo '	pinctrl-0 = <&mmc2_8bit_pins>;' >> "$DTS_FILE"
-            echo '	vmmc-supply = <&reg_vcc3v3>;' >> "$DTS_FILE"
-            echo '	vqmmc-supply = <&reg_vcc3v3>;' >> "$DTS_FILE"
-            echo '	bus-width = <4>;' >> "$DTS_FILE"
-            echo '	non-removable;' >> "$DTS_FILE"
-            echo '	status = "okay";' >> "$DTS_FILE"
-            echo '' >> "$DTS_FILE"
-            echo '	brcmf: wifi@1 {' >> "$DTS_FILE"
-            echo '		reg = <1>;' >> "$DTS_FILE"
-            echo '		compatible = "brcm,bcm4329-fmac";' >> "$DTS_FILE"
-            echo '	};' >> "$DTS_FILE"
-            echo '};' >> "$DTS_FILE"
-          fi
-          
-          # 3. 设置默认 LAN IP 为 192.168.199.1 & 开启权威 DHCP 模式秒连
-          UCI_CUSTOM="package/base-files/files/bin/config_generate"
-          if [ -f "$UCI_CUSTOM" ]; then
-            sed -i 's/192.168.1.1/192.168.199.1/g' "$UCI_CUSTOM"
-          fi
-          DHCP_CONF="package/network/services/dnsmasq/files/dhcp.conf"
-          if [ -f "$DHCP_CONF" ]; then
-            sed -i "/config dhcp 'lan'/a \\\toption authoritative '1'" "$DHCP_CONF"
           fi
           
           make defconfig
+
+      - name: Download Package Toolchain
+        run: |
+          make download -j8
+          find dl -size -1024c -exec rm -f {} \;
 
       - name: Compile Firmware
         run: |
           make -j$(nproc) || make -j1 V=s
 
-      - name: Organize Artifacts
-        run: |
-          mkdir -p bin/out
-          
-          # 4. 全量诊断元数据文件打包
-          cp -f bin/targets/sunxi/cortexa7/*.buildinfo bin/out/ 2>/dev/null || true
-          cp -f bin/targets/sunxi/cortexa7/*.manifest bin/out/ 2>/dev/null || true
-          cp -f bin/targets/sunxi/cortexa7/sha256sums bin/out/ 2>/dev/null || true
-          
-          # 5. 严格过滤并精准提取 R1S-H3 专属固件包，避免 1.08G 大包污染
-          cp -f bin/targets/sunxi/cortexa7/*friendlyarm_nanopi-r1s-h3*.* bin/out/ 2>/dev/null || true
-
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
-          name: immortalwrt-nanopi-r1s-h3
-          path: bin/out/*
+          name: ImmortalWrt-NanoPi-R1S-H3
+          path: bin/targets/sunxi/cortexa7/*.img.gz
