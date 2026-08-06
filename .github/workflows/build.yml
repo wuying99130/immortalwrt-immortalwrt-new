@@ -8,13 +8,13 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout Source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Initialization Environment
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
-          sudo rm -rf /etc/apt/sources.list.d/* /usr/share/dotnet /usr/local/lib/android /opt/ghc
+          sudo rm -rf /etc/apt/sources.list.d/* /usr/share/dotnet /usr/local/lib/android /opt/gh
           sudo apt-get update
           sudo apt-get install -y build-essential clang flex bison gawk g++-multilib g++ \
             gettext git libncurses5-dev libssl-dev python3-distutils rsync unzip zlib1g-dev \
@@ -26,40 +26,49 @@ jobs:
           ./scripts/feeds update -a
           ./scripts/feeds install -a
 
-      - name: Apply Custom Configurations & Custom Rules
+      - name: Apply Configuration & WiFi Fixes
         run: |
-          # 1. 复制种子配置文件
           cp r1s-h3.config.seed .config
-
-          # 2. 14 版标准的单设备锁定逻辑 (第 2 点：防止全系列 Profile 膨胀)
+          
+          # 1. 严格锁定 NanoPi R1 设备，防止全系列多 Profile 膨胀 (改进 2)
           echo "CONFIG_TARGET_sunxi=y" >> .config
           echo "CONFIG_TARGET_sunxi_cortexa7=y" >> .config
-          echo "CONFIG_TARGET_sunxi_cortexa7_DEVICE_friendlyarm_nanopi-r1s-h3=y" >> .config
-
-          # 3. 15 版成功验证的 AP6212 无线 DTS 节点激活 (mmc2 SDIO WiFi)
-          DTS_FILE=$(find target/linux/sunxi/ -iname "*nanopi*r1s*.dts" 2>/dev/null | head -n 1)
+          echo "CONFIG_TARGET_DEVICE_sunxi_cortexa7_DEVICE_friendlyarm_nanopi-r1=y" >> .config
+          
+          # 2. 注入 15 版验证成功的 DTS 无线 WiFi 节点激活逻辑 (确保 WiFi 有效)
+          DTS_FILE=$(find target/linux/sunxi/ -iname "*nanopi*r1*.dts" 2>/dev/null | head -n 1)
           if [ -n "$DTS_FILE" ]; then
+            echo "Applying SDIO overlay to: $DTS_FILE"
             sed -i '/&mmc2/,/};/s/status = "disabled";/status = "okay";/' "$DTS_FILE"
+            
+            echo '' >> "$DTS_FILE"
+            echo '&mmc2 {' >> "$DTS_FILE"
+            echo '	pinctrl-names = "default";' >> "$DTS_FILE"
+            echo '	pinctrl-0 = <&mmc2_8bit_pins>;' >> "$DTS_FILE"
+            echo '	vmmc-supply = <&reg_vcc3v3>;' >> "$DTS_FILE"
+            echo '	vqmmc-supply = <&reg_vcc3v3>;' >> "$DTS_FILE"
+            echo '	bus-width = <4>;' >> "$DTS_FILE"
+            echo '	non-removable;' >> "$DTS_FILE"
+            echo '	status = "okay";' >> "$DTS_FILE"
+            echo '' >> "$DTS_FILE"
+            echo '	brcmf: wifi@1 {' >> "$DTS_FILE"
+            echo '		reg = <1>;' >> "$DTS_FILE"
+            echo '		compatible = "brcm,bcm4329-fmac";' >> "$DTS_FILE"
+            echo '	};' >> "$DTS_FILE"
+            echo '};' >> "$DTS_FILE"
           fi
-
-          # 4. 第 5 点改进：设置默认 LAN 口 IP 为 192.168.199.1 & 开启权威 DHCP 模式秒连
+          
+          # 3. 改进 5：LAN 口 IP 设为 192.168.199.1 & 开启权威 DHCP 模式防冲突
           UCI_CUSTOM="package/base-files/files/bin/config_generate"
           if [ -f "$UCI_CUSTOM" ]; then
             sed -i 's/192.168.1.1/192.168.199.1/g' "$UCI_CUSTOM"
           fi
-          
           DHCP_CONF="package/network/services/dnsmasq/files/dhcp.conf"
           if [ -f "$DHCP_CONF" ]; then
             sed -i "/config dhcp 'lan'/a \\\toption authoritative '1'" "$DHCP_CONF"
           fi
-
-          # 5. 自动补全依赖关系（14 版标准动作）
+          
           make defconfig
-
-      - name: Download Package Dependencies
-        run: |
-          make download -j$(nproc)
-          find dl -size -1024c -exec rm -f {} \;
 
       - name: Compile Firmware
         run: |
@@ -68,17 +77,17 @@ jobs:
       - name: Organize Artifacts
         run: |
           mkdir -p bin/out
-
-          # 第 4 点改进：全量诊断元数据文件打包
+          
+          # 4. 改进 4：全量诊断元数据文件打包
           cp -f bin/targets/sunxi/cortexa7/*.buildinfo bin/out/ 2>/dev/null || true
           cp -f bin/targets/sunxi/cortexa7/*.manifest bin/out/ 2>/dev/null || true
           cp -f bin/targets/sunxi/cortexa7/sha256sums bin/out/ 2>/dev/null || true
-
-          # 第 2 点与第 3 点改进：只提取 R1S-H3 的专属固件 (img.gz) 与根文件系统 (rootfs.tar.gz)
-          cp -f bin/targets/sunxi/cortexa7/*nanopi-r1s-h3*.* bin/out/ 2>/dev/null || true
+          
+          # 5. 精准提取专属目标固件 (img.gz / rootfs.tar.gz)，绝不产生多余垃圾文件
+          cp -f bin/targets/sunxi/cortexa7/*friendlyarm_nanopi-r1*.* bin/out/ 2>/dev/null || true
 
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
-          name: ImmortalWrt_NanoPi_R1S-H3
+          name: immortalwrt-nanopi-r1s-h3
           path: bin/out/*
