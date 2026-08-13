@@ -1,3 +1,7 @@
+
+第14版代码合理流畅，编译顺畅效率高，是以后所有版本的基础版本。存在BUG：没有无线WiFi。
+
+
 <img src="https://avatars.githubusercontent.com/u/53193414?s=200&v=4" alt="logo" width="200" height="200" align="right">
 
 # Project ImmortalWrt
