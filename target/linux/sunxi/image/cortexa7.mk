@@ -314,3 +314,15 @@ define Device/xunlong_orangepi-2
   SOC := sun8i-h3
 endef
 TARGET_DEVICES += xunlong_orangepi-2
+
+define Device/nanopi-r1s-h3
+  DEVICE_TITLE := FriendlyARM NanoPi R1S-H3
+  DEVICE_DTS := sun8i-h3-nanopi-r1s-h3
+  DEVICE_PACKAGES := \
+        kmod-usb-net-rtl8152 \
+        kmod-rtl8189es \
+        kmod-usb2 \
+        kmod-usb-ohci \
+        kmod-usb-ehci
+endef
+TARGET_DEVICES += nanopi-r1s-h3
