@@ -1,1 +1,115 @@
+/dts-v1/;
+/include/ "sun8i-h3.dtsi"
+/include/ "sun8i-h3-nanopi.dtsi"
+
+/ {
+    model = "FriendlyARM NanoPi R1S-H3";
+    compatible = "friendlyarm,nanopi-r1s-h3", "allwinner,sun8i-h3";
+
+    chosen {
+        bootargs = "console=ttyS0,115200";
+    };
+
+    aliases {
+        ethernet0 = &gmac;      /* 板载千兆口 */
+        ethernet1 = &usb_eth;   /* USB 网卡（第二个网口） */
+        serial0   = &uart0;
+        mmc0      = &mmc0;      /* TF 卡 */
+        wifi0     = &wifi;
+    };
+
+    leds {
+        compatible = "gpio-leds";
+
+        sys {
+            label = "nanopi-r1s-h3:green:sys";
+            gpios = <&pio 0 10 GPIO_ACTIVE_HIGH>; /* PA10 */
+            default-state = "on";
+        };
+
+        lan {
+            label = "nanopi-r1s-h3:green:lan";
+            gpios = <&pio 0 9 GPIO_ACTIVE_HIGH>;  /* PA9 */
+        };
+
+        wan {
+            label = "nanopi-r1s-h3:green:wan";
+            gpios = <&pio 6 11 GPIO_ACTIVE_HIGH>; /* PG11 */
+        };
+    };
+
+    keys {
+        compatible = "gpio-keys";
+
+        reset {
+            label = "reset";
+            gpios = <&pio 11 3 GPIO_ACTIVE_LOW>;  /* PL3 */
+            linux,code = <KEY_RESTART>;
+        };
+
+        recovery {
+            label = "recovery";
+            gpios = <&pio 11 4 GPIO_ACTIVE_LOW>;  /* PL4 */
+            linux,code = <KEY_RESERVED>;
+        };
+    };
+};
+
+/* 板载千兆 GMAC + RTL8211E PHY */
+&gmac {
+    phy-mode = "rgmii";
+    phy-handle = <&ext_rgmii_phy>;
+    status = "okay";
+};
+
+&mdio {
+    ext_rgmii_phy: ethernet-phy@1 {
+        reg = <1>;
+        compatible = "realtek,rtl8211e";
+        /* 根据原理图可加 tx/rx 延时配置 */
+    };
+};
+
+/* USB 网卡（RTL8153B）通过 USB2.0 接入 */
+&usb_otg {
+    status = "okay";
+};
+
+&usb_host0 {
+    status = "okay";
+};
+
+&usb_host1 {
+    status = "okay";
+};
+
+/* 这里不需要专门为 RTL8153 写节点，内核会通过 USB 自动识别为网卡 */
+
+/* SDIO WiFi（AP6212 / BCM43430） */
+&wifi {
+    compatible = "brcm,bcm43430-firmware";
+    status = "okay";
+};
+
+/* MMC0：TF 卡 */
+&mmc0 {
+    bus-width = <4>;
+    non-removable = "false";
+    vmmc-supply = <&reg_vcc3v3>;
+    status = "okay";
+};
+
+/* 串口 UART0：调试口 */
+&uart0 {
+    pinctrl-names = "default";
+    pinctrl-0 = <&uart0_pins>;
+    status = "okay";
+};
+
+/* UART3：WiFi/BT 模块（如果需要） */
+&uart3 {
+    status = "okay";
+};
+
+/* 电源、regulator 根据原理图可进一步细化，这里先保持最小化 */
 
