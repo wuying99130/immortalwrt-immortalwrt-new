@@ -128,3 +128,9 @@ define KernelPackage/sound-soc-sunxi-spdif/description
 endef
 
 $(eval $(call KernelPackage,sound-soc-sunxi-spdif))
+
+define Device/nanopi-r1s-h3
+  DEVICE_TITLE := FriendlyARM NanoPi R1S-H3
+  DEVICE_DTS := sun8i-h3-nanopi-r1s-h3
+endef
+TARGET_DEVICES += nanopi-r1s-h3
