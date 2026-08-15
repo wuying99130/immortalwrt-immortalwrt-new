@@ -11,10 +11,9 @@
     };
 
     aliases {
-        ethernet0 = &gmac;      /* 板载千兆口 */
-        ethernet1 = &usb_eth;   /* USB 网卡（第二个网口） */
+        ethernet0 = &gmac;
         serial0   = &uart0;
-        mmc0      = &mmc0;      /* TF 卡 */
+        mmc0      = &mmc0;
         wifi0     = &wifi;
     };
 
@@ -59,6 +58,8 @@
 &gmac {
     phy-mode = "rgmii";
     phy-handle = <&ext_rgmii_phy>;
+    tx-delay = <4>;
+    rx-delay = <4>;
     status = "okay";
 };
 
@@ -66,11 +67,17 @@
     ext_rgmii_phy: ethernet-phy@1 {
         reg = <1>;
         compatible = "realtek,rtl8211e";
-        /* 根据原理图可加 tx/rx 延时配置 */
+        tx-delay = <4>;
+        rx-delay = <4>;
     };
 };
 
-/* USB 网卡（RTL8153B）通过 USB2.0 接入 */
+/* WiFi 模块（AP6212 / BCM43430） */
+&wifi {
+    status = "okay";
+};
+
+/* USB Host 控制器（用于 RTL8153 网卡） */
 &usb_otg {
     status = "okay";
 };
@@ -83,33 +90,12 @@
     status = "okay";
 };
 
-/* 这里不需要专门为 RTL8153 写节点，内核会通过 USB 自动识别为网卡 */
-
-/* SDIO WiFi（AP6212 / BCM43430） */
-&wifi {
-    compatible = "brcm,bcm43430-firmware";
-    status = "okay";
-};
-
-/* MMC0：TF 卡 */
-&mmc0 {
-    bus-width = <4>;
-    non-removable = "false";
-    vmmc-supply = <&reg_vcc3v3>;
-    status = "okay";
-};
-
-/* 串口 UART0：调试口 */
+/* UART0 控制台 */
 &uart0 {
-    pinctrl-names = "default";
-    pinctrl-0 = <&uart0_pins>;
     status = "okay";
 };
 
-/* UART3：WiFi/BT 模块（如果需要） */
-&uart3 {
+/* TF 卡 */
+&mmc0 {
     status = "okay";
 };
-
-/* 电源、regulator 根据原理图可进一步细化，这里先保持最小化 */
-
