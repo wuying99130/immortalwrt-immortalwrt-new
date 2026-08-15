@@ -1,1 +1,76 @@
+/dts-v1/;
 
+#include "sun8i-h3.dtsi"
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/input/input.h>
+
+/ {
+    model = "FriendlyARM NanoPi R1S-H3";
+    compatible = "friendlyarm,nanopi-r1s-h3", "allwinner,sun8i-h3";
+
+    aliases {
+        serial0 = &uart0;
+        ethernet0 = &emac;
+        ethernet1 = &rtl8189;
+    };
+
+    chosen {
+        stdout-path = "serial0:115200n8";
+    };
+
+    memory@40000000 {
+        device_type = "memory";
+        reg = <0x40000000 0x40000000>;
+    };
+
+    leds {
+        compatible = "gpio-leds";
+
+        status_led {
+            label = "nanopi-r1s-h3:green:status";
+            gpios = <&pio 0 10 GPIO_ACTIVE_HIGH>; /* PA10 */
+        };
+    };
+};
+
+/* UART0 Console */
+&uart0 {
+    pinctrl-names = "default";
+    pinctrl-0 = <&uart0_pins>;
+    status = "okay";
+};
+
+/* Ethernet PHY (H3 内置 EMAC) */
+&emac {
+    phy-handle = <&phy1>;
+    phy-mode = "rmii";
+    status = "okay";
+};
+
+&mdio {
+    phy1: ethernet-phy@1 {
+        reg = <1>;
+    };
+};
+
+/* USB WiFi RTL8189ES */
+&usb_otg {
+    dr_mode = "host";
+    status = "okay";
+};
+
+&usbphy {
+    status = "okay";
+};
+
+/* SPI Flash (R1S-H3 没有 SPI NOR，保持 disabled) */
+&spi0 {
+    status = "disabled";
+};
+
+/* I2C (未使用) */
+&i2c0 {
+    status = "disabled";
+};
+
+/
