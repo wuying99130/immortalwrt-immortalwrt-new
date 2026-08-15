@@ -21,3 +21,16 @@ define Profile/Default/Description
   Default profile with package set compatible with most boards.
 endef
 $(eval $(call Profile,Default))
+
+define Profile/nanopi-r1s-h3
+  NAME:=FriendlyARM NanoPi R1S-H3
+  PACKAGES:= \
+        kmod-usb-net-rtl8152 \
+        kmod-usb2 \
+        kmod-usb-ohci \
+        kmod-usb-ehci \
+        kmod-phy-sun4i-usb \
+        kmod-rtc-sunxi \
+        kmod-gpio-button-hotplug
+endef
+$(eval $(call Profile,nanopi-r1s-h3))
