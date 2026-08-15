@@ -26,16 +26,15 @@ jobs:
           ./scripts/feeds update -a
           ./scripts/feeds install -a
 
-      - name: Update Configuration and DTS
+      - name: Update Configuration
         run: |
+          rm -f .config .config.old
           cp r1s-h3.config.seed .config
           
-          # 1. 完整保留架构与设备目标
           echo "CONFIG_TARGET_sunxi=y" >> .config
           echo "CONFIG_TARGET_sunxi_cortexa7=y" >> .config
           echo "CONFIG_TARGET_sunxi_cortexa7_DEVICE_friendlyarm_nanopi-r1s-h3=y" >> .config
           
-          # 2. 补全无线网卡驱动、无线工具及中文语言支持，确保功能完整
           echo "CONFIG_LUCI_LANG_zh_Hans=y" >> .config
           echo "CONFIG_PACKAGE_kmod-usb-net-rtl8152=y" >> .config
           echo "CONFIG_PACKAGE_kmod-brcmfmac=y" >> .config
@@ -44,12 +43,6 @@ jobs:
           echo "CONFIG_PACKAGE_iw=y" >> .config
           echo "CONFIG_PACKAGE_iwinfo=y" >> .config
           echo "CONFIG_PACKAGE_wpad-basic-mbedtls=y" >> .config
-          
-          # 3. 修复 DTS 文件中的 mmc2 (SDIO WiFi) 禁用状态为 okay
-          DTS_FILE=$(find target/linux/sunxi/ -iname "*nanopi*r1s*.dts" 2>/dev/null | head -n 1)
-          if [ -n "$DTS_FILE" ]; then
-            sed -i '/&mmc2/,/};/s/status = "disabled";/status = "okay";/' "$DTS_FILE"
-          fi
           
           make defconfig
 
@@ -66,11 +59,8 @@ jobs:
         run: |
           mkdir -p bin/out
           
-          echo "=== 正在打包 NanoPi R1S-H3 完整固件 ==="
-          # 只复制 cortexa7 根目录下的 .img.gz 固件和 sha256 校验文件，确保无线和所有功能正常带入
-          find bin/targets/sunxi/cortexa7/ -maxdepth 1 -type f \( -name "*.img.gz" -o -name "sha256sums" \) -exec cp -f {} bin/out/ \;
+          find bin/targets/sunxi/cortexa7/ -maxdepth 1 -type f \( -name "*.img.gz" -o -name "*rootfs.tar.gz" -o -name "sha256sums" \) -exec cp -f {} bin/out/ \;
           
-          echo "=== 打包输出目录清单 ==="
           ls -lh bin/out/
 
       - name: Upload Artifacts
