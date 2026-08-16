@@ -6,65 +6,50 @@ on:
 jobs:
   build:
     runs-on: ubuntu-22.04
+
     steps:
       - name: Checkout Source
         uses: actions/checkout@v5
 
-      - name: Initialization Environment
-        env:
-          DEBIAN_FRONTEND: noninteractive
+      - name: Init Env
         run: |
-          sudo rm -rf /etc/apt/sources.list.d/* /usr/share/dotnet /usr/local/lib/android /opt/ghc
-          sudo apt-get update
-          sudo apt-get install -y build-essential clang flex bison gawk g++-multilib g++ \
+          sudo apt update
+          sudo apt install -y build-essential clang flex bison gawk g++-multilib g++ \
             gettext git libncurses5-dev libssl-dev python3-distutils rsync unzip zlib1g-dev \
             file wget swig libelf-dev libgmp-dev libltdl-dev libmpc-dev libmpfr-dev \
-            libtool ninja-build p7zip p7zip-full qemu-utils u-boot-tools upx-ucl xxd
+            libtool ninja-build p7zip-full qemu-utils u-boot-tools upx-ucl xxd
 
       - name: Update Feeds
         run: |
           ./scripts/feeds update -a
           ./scripts/feeds install -a
 
-      - name: Update Configuration
+      - name: Load Config
         run: |
-          rm -f .config .config.old
           cp r1s-h3.config.seed .config
-          
+
           echo "CONFIG_TARGET_sunxi=y" >> .config
           echo "CONFIG_TARGET_sunxi_cortexa7=y" >> .config
           echo "CONFIG_TARGET_sunxi_cortexa7_DEVICE_friendlyarm_nanopi-r1s-h3=y" >> .config
-          
-          echo "CONFIG_LUCI_LANG_zh_Hans=y" >> .config
-          echo "CONFIG_PACKAGE_kmod-usb-net-rtl8152=y" >> .config
-          echo "CONFIG_PACKAGE_kmod-brcmfmac=y" >> .config
-          echo "CONFIG_PACKAGE_brcmfmac-firmware-43430-sdio=y" >> .config
-          echo "CONFIG_PACKAGE_cypress-firmware-43430-sdio=y" >> .config
-          echo "CONFIG_PACKAGE_iw=y" >> .config
-          echo "CONFIG_PACKAGE_iwinfo=y" >> .config
-          echo "CONFIG_PACKAGE_wpad-basic-mbedtls=y" >> .config
-          
+
           make defconfig
 
-      - name: Download Package Toolchain
+      - name: Download
         run: |
           make download -j8
-          find dl -size -1024c -exec rm -f {} \;
+          find dl -size -1024c -delete
 
-      - name: Compile Firmware
+      - name: Build
         run: |
           make -j$(nproc) || make -j1 V=s
 
-      - name: Organize Artifacts
+      - name: Output
         run: |
           mkdir -p bin/out
-          
-          find bin/targets/sunxi/cortexa7/ -maxdepth 1 -type f \( -name "*.img.gz" -o -name "*rootfs.tar.gz" -o -name "sha256sums" \) -exec cp -f {} bin/out/ \;
-          
-          ls -lh bin/out/
+          cp -f bin/targets/sunxi/cortexa7/* bin/out/ || true
 
-      - name: Upload Artifacts
+      - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: ImmortalWrt-NanoPi-R1S-H3
-          path: bin/out/*
+          name: R1S-H3
+          path: bin/out
