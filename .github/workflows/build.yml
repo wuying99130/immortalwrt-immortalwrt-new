@@ -1,4 +1,4 @@
-name: Build ImmortalWrt for NanoPi R1S-H3
+name: Build ImmortalWrt 23.05 for NanoPi R1S-H3
 
 on:
   workflow_dispatch:
@@ -8,13 +8,17 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-      - name: Checkout Source
+      - name: Checkout 23.05 Source
         uses: actions/checkout@v5
+        with:
+          ref: immortalwrt-23.05
 
       - name: Init Env
+        env:
+          DEBIAN_FRONTEND: noninteractive
         run: |
-          sudo apt update
-          sudo apt install -y build-essential clang flex bison gawk g++-multilib g++ \
+          sudo apt-get update
+          sudo apt-get install -y build-essential clang flex bison gawk g++-multilib g++ \
             gettext git libncurses5-dev libssl-dev python3-distutils rsync unzip zlib1g-dev \
             file wget swig libelf-dev libgmp-dev libltdl-dev libmpc-dev libmpfr-dev \
             libtool ninja-build p7zip-full qemu-utils u-boot-tools upx-ucl xxd
@@ -24,7 +28,7 @@ jobs:
           ./scripts/feeds update -a
           ./scripts/feeds install -a
 
-      - name: Load Config
+      - name: Load R1S-H3 Config
         run: |
           cp r1s-h3.config.seed .config
 
@@ -43,13 +47,26 @@ jobs:
         run: |
           make -j$(nproc) || make -j1 V=s
 
-      - name: Output
+      - name: Collect Artifacts
         run: |
           mkdir -p bin/out
-          cp -f bin/targets/sunxi/cortexa7/* bin/out/ || true
+          BUILD_DATE=$(date +%Y%m%d)
+
+          for file in bin/targets/sunxi/cortexa7/*nanopi-r1*.img.gz; do
+            [ -f "$file" ] || continue
+            base=$(basename "$file")
+            cp "$file" "bin/out/${base%.img.gz}-${BUILD_DATE}.img.gz"
+          done
+
+          for file in bin/targets/sunxi/cortexa7/*rootfs.tar.gz; do
+            [ -f "$file" ] || continue
+            cp "$file" "bin/out/immortalwrt-sunxi-cortexa7-rootfs-${BUILD_DATE}.tar.gz"
+          done
+
+          [ -f bin/targets/sunxi/cortexa7/sha256sums ] && cp bin/targets/sunxi/cortexa7/sha256sums bin/out/
 
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: R1S-H3
+          name: ImmortalWrt-23.05-NanoPi-R1S-H3
           path: bin/out
